@@ -2,6 +2,7 @@ package uz.pdp.official_support_company_bot.entity;
 
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 import uz.pdp.official_support_company_bot.bot.State;
 
 import javax.persistence.Entity;
@@ -39,5 +40,9 @@ public class BotUser {
     private String weekly_target ;
 
     private String role;
+
+    private boolean isTargetEdited = false;
+
+    private String resultsOfTarget ;
 
 }

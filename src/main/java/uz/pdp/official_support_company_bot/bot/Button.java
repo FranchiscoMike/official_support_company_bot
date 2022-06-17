@@ -17,4 +17,7 @@ public interface Button {
     String COMMENT = "\uD83D\uDCDD Share your ideas with HR_DEPARTMENT!";
 
     String INBOX = "\uD83D\uDCEC All inboxes!";
+    String BACK = "Back  🔙";
+    String EDIT_TARGET = "⚙️ Editing target!";
+    String SETTING_WEEKLY_RESULTS = "\uD83D\uDCC8 Setting results of target!";
 }

@@ -18,6 +18,8 @@ public interface State {
     String SETTING_WEEKLY_TARGET = "Setting his or her weekly target";
     String SENDING_NEWS = "Sending news to all users of bot!";
 
+    String SEND_TO_ALL = "Sending to all users";
+
     String CHOOSE_ONE = "choosing one to send message to one person!";
 
     String SEND_TO_ONE = "Sending message to one person!";
@@ -25,4 +27,10 @@ public interface State {
     String USER_OR_ADMIN = "Checking user or admin for menu bar!";
 
     String COMMENTING = "Writing messages to admins!";
+    String PERSONAL_MESSAGE = "Sending to one special message!";
+    String SEND_PRIVATE_MESSAGE = "sending private message1";
+
+    String EDITING_TARGET = "editing his or her target!";
+    String SETTING_WEEKLY_TARGET_RESULTS = "setting results of weekly target!";
+
 }

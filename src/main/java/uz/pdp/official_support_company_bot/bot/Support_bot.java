@@ -10,7 +10,9 @@ import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import uz.pdp.official_support_company_bot.entity.BotUser;
 import uz.pdp.official_support_company_bot.entity.Messages;
+import uz.pdp.official_support_company_bot.entity.enums.MessageType;
 import uz.pdp.official_support_company_bot.repository.BotUserRepository;
+import uz.pdp.official_support_company_bot.repository.MessagesRepository;
 import uz.pdp.official_support_company_bot.service.BotService;
 
 import java.util.List;
@@ -26,9 +28,8 @@ public class Support_bot extends TelegramLongPollingBot {
     @Value("${telegram_bot_botToken}")
     String botToken;
 
-      @Value("${special_code}")
+    @Value("${special_code}")
     String code;
-
 
 
     @Override
@@ -45,6 +46,8 @@ public class Support_bot extends TelegramLongPollingBot {
     private final BotService botService;
     private final BotUserRepository userRepository;
 
+    private final MessagesRepository messagesRepository;
+
     @SneakyThrows
     @Override
     public void onUpdateReceived(Update update) {
@@ -59,7 +62,7 @@ public class Support_bot extends TelegramLongPollingBot {
 
             SendMessage sendMessage = new SendMessage();
             sendMessage.setChatId(chatId + "");
-            sendMessage.setText(" ");
+            sendMessage.setText("12 ");
 
             Optional<BotUser> optionalBotUser = userRepository.findByChatId(chatId.toString());
 
@@ -67,11 +70,6 @@ public class Support_bot extends TelegramLongPollingBot {
                 current_user = optionalBotUser.get();
 
                 String state = current_user.getState();
-
-                if (message.getText() != null && message.getText().equals("/start")) {
-                    current_user.setState(State.START);
-                    userRepository.save(current_user);
-                }
 
 
                 switch (state) {
@@ -108,10 +106,11 @@ public class Support_bot extends TelegramLongPollingBot {
                         userRepository.save(current_user);
                         break;
                     case State.ENTERING_CODE:
-                        sendMessage = botService.user_or_admin(update, current_user,code);
+                        sendMessage = botService.user_or_admin(update, current_user, code);
                         current_user.setState(State.USER_OR_ADMIN);
                         userRepository.save(current_user);
                         break;
+
 
                     case State.USER_OR_ADMIN:
 
@@ -119,14 +118,47 @@ public class Support_bot extends TelegramLongPollingBot {
 
                         switch (role) {
                             case "admin":
-                        sendMessage = botService.admin_menu_bar(update, current_user);
+                                sendMessage = botService.admin_menu_bar(update, current_user);
                                 break;
                             case "user":
-                        sendMessage = botService.user_menu_bar(update, current_user);
+                                sendMessage = botService.user_menu_bar(update, current_user);
                                 break;
                             default:
                                 throw new IllegalStateException("Unexpected value: " + state);
                         }
+                        break;
+                    case State.PERSONAL_MESSAGE:
+
+                        sendMessage = botService.sendingPersonalMessage(update, current_user);
+                        current_user.setState(State.SEND_PRIVATE_MESSAGE);
+                        userRepository.save(current_user);
+                        break;
+
+
+                    case State.SEND_PRIVATE_MESSAGE:
+                        // xabarni shu yerda jo'natamiza bo'lmasa ishlameydi
+
+                        Optional<Messages> bySender_idAndTypeAndTextIsNull = messagesRepository.findBySender_IdAndTypeAndTextIsNull(current_user.getId(), MessageType.PRIVATE);
+                        Messages messages1 = bySender_idAndTypeAndTextIsNull.get();
+
+                        messages1.setText(text);
+                        messagesRepository.save(messages1);
+
+                        // userga xabar jo'natiladi
+                        BotUser receiver = messages1.getReceiver();
+
+                        sendMessage.setChatId(receiver.getChatId());
+                        sendMessage.setText(text + "\n\nby : " + current_user.getFullName());
+
+                        execute(sendMessage);
+
+
+//                        adminga jo'natadigan xabar :
+                        sendMessage.setText("xabaringiz yuborildi !");
+                        sendMessage.setChatId(current_user.getChatId());
+                        execute(sendMessage);
+                        current_user.setState(State.USER_OR_ADMIN);
+                        userRepository.save(current_user);
                         break;
 
 
@@ -142,40 +174,79 @@ public class Support_bot extends TelegramLongPollingBot {
                         break;
 
                     case State.SENDING_NEWS:
-                        String messageText = message.getText();
-
-                        Messages messages = new Messages();
-                        messages.setReceiver(current_user);;
-                        messages.setText(messageText);
-
-
-                        current_user.setState(State.SEND_TO_ONE);
+                        sendMessage = botService.checkingNews(update, current_user);
+                        current_user.setState(State.SEND_TO_ALL);
                         userRepository.save(current_user);
-
-                        List<BotUser> all = userRepository.findAll();
-
-                        // hamm userga xabar jo'natilayapti
-
-                        for (BotUser botUser : all) {
-                            sendMessage.setChatId(botUser.getChatId());
-                            execute(sendMessage);
-                        }
-                        sendMessage.setText("your message is sent to All users!");
                         break;
 
+                    case State.SEND_TO_ALL:
+
+                        Messages message1 = new Messages();
+
+                        // finding message
+                        Optional<Messages> optionalMessages = messagesRepository.findBySender_IdAndTypeIsNull(current_user.getId());
+                        if (optionalMessages.isPresent()) {
+                            Messages messages = optionalMessages.get();
+                            message1 = messages;
+                            messages.setType(MessageType.PUBLIC);
+                            messagesRepository.save(messages);
+
+                        }
+
+                        switch (text) {
+                            case Button.ACCEPT:
+                                List<BotUser> all = userRepository.findAll();
+                                for (BotUser botUser : all) {
+                                    sendMessage.setText(message1.getText());
+                                    sendMessage.setChatId(botUser.getChatId());
+
+                                    current_user.setState(State.USER_OR_ADMIN);
+                                    userRepository.save(current_user);
+
+                                    execute(sendMessage);
+                                }
+                                break;
+                            case Button.REJECT:
+
+                                messagesRepository.delete(message1);
+                                sendMessage.setText("Data cleared successfully!");
+                                break;
+                        }
+
+
+                        sendMessage.setText("Message is sent to all users");
+                        current_user.setState(State.USER_OR_ADMIN);
+                        userRepository.save(current_user);
+                        break;
+                    case State.EDITING_TARGET:
+                        sendMessage = botService.editingTarget(update,current_user);
+                        current_user.setState(State.USER_OR_ADMIN);
+                        userRepository.save(current_user);
+                        break;
+
+
+                    case State.SETTING_WEEKLY_TARGET_RESULTS:
+                        sendMessage = botService.settingWeeklyTargetResults(update,current_user);
+                        current_user.setState(State.USER_OR_ADMIN);
+                        userRepository.save(current_user);
+                        break;
+
+
                     default:
-                        throw new IllegalStateException("Unexpected value: " + state);
+                        sendMessage.setText("Something went wrong please enter what is asked!, " + current_user.getFullName());
                 }
 
             } else {
                 if (text.equals("/start")) {
                     sendMessage = botService.welcome(update);
                 }
+
                 BotUser botUser = new BotUser();
                 botUser.setChatId(chatId.toString());
                 botUser.setState(State.FULL_NAME);
-                BotUser save = userRepository.save(botUser);
+                userRepository.save(botUser);
             }
+
 
             execute(sendMessage);
 

@@ -6,6 +6,9 @@ import uz.pdp.official_support_company_bot.entity.enums.MessageType;
 
 import javax.persistence.*;
 import java.sql.Timestamp;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -33,5 +36,8 @@ public class Messages {
     private String text;
 
 
+//    public static void main(String[] args) {
+//        System.out.println("Current Time is -> "+ LocalDate.now()+" "+ (LocalTime.now()+"").substring(0,8));
+//    }
 
 }

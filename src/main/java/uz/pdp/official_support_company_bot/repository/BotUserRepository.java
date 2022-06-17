@@ -8,4 +8,5 @@ import java.util.Optional;
 public interface BotUserRepository extends JpaRepository<BotUser, Long> {
 
     Optional<BotUser> findByChatId(String chatId);
+    Optional<BotUser> findByFullName(String fullName);
 }
