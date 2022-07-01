@@ -8,6 +8,9 @@ import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import uz.pdp.official_support_company_bot.entity.BotUser;
 import uz.pdp.official_support_company_bot.entity.Messages;
 import uz.pdp.official_support_company_bot.entity.enums.MessageType;
@@ -15,6 +18,7 @@ import uz.pdp.official_support_company_bot.repository.BotUserRepository;
 import uz.pdp.official_support_company_bot.repository.MessagesRepository;
 import uz.pdp.official_support_company_bot.service.BotService;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -88,7 +92,7 @@ public class Support_bot extends TelegramLongPollingBot {
                         break;
                     case State.PHONE_NUMBER:
                         if (message.hasContact()) {
-                            sendMessage = botService.askingTheirPosition(update, current_user);
+                            sendMessage = botService.askingTheirPosition(code,update, current_user);
                             current_user.setState(State.POSITION);
                             userRepository.save(current_user);
                         } else {
@@ -102,8 +106,6 @@ public class Support_bot extends TelegramLongPollingBot {
                         break;
                     case State.CHECKOUT:
                         sendMessage = botService.asking_code(update, current_user);
-                        current_user.setState(State.ENTERING_CODE);
-                        userRepository.save(current_user);
                         break;
                     case State.ENTERING_CODE:
                         sendMessage = botService.user_or_admin(update, current_user, code);
@@ -173,6 +175,13 @@ public class Support_bot extends TelegramLongPollingBot {
                         sendMessage = botService.setWeeklyTarget(update, current_user);
                         break;
 
+
+                    case State.CHECKING_TARGET:
+                        sendMessage = botService.chekingTarget(update, current_user);
+                        break;
+
+
+
                     case State.SENDING_NEWS:
                         sendMessage = botService.checkingNews(update, current_user);
                         current_user.setState(State.SEND_TO_ALL);
@@ -197,14 +206,44 @@ public class Support_bot extends TelegramLongPollingBot {
                             case Button.ACCEPT:
                                 List<BotUser> all = userRepository.findAll();
                                 for (BotUser botUser : all) {
-                                    sendMessage.setText(message1.getText());
+                                    sendMessage.setText(message1.getText()+"\n\n by :"+current_user.getFullName());
                                     sendMessage.setChatId(botUser.getChatId());
-
-                                    current_user.setState(State.USER_OR_ADMIN);
-                                    userRepository.save(current_user);
-
                                     execute(sendMessage);
                                 }
+                                    current_user.setState(State.USER_OR_ADMIN);
+                                    userRepository.save(current_user);
+                                    ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
+                                    replyKeyboardMarkup.setResizeKeyboard(true);
+                                    replyKeyboardMarkup.setSelective(true);
+                                    replyKeyboardMarkup.setOneTimeKeyboard(true);
+
+                                    List<KeyboardRow> rowList = new ArrayList<>();
+
+                                    KeyboardRow row0 = new KeyboardRow();
+                                    row0.add(new KeyboardButton(Button.ALL_TARGETS));
+                                    row0.add(new KeyboardButton(Button.INBOX));
+                                    rowList.add(row0);
+
+                                    KeyboardRow row = new KeyboardRow();
+                                    row.add(new KeyboardButton(Button.ALL_PEOPLE));
+                                    row.add(new KeyboardButton(Button.NEWS));
+                                    rowList.add(row);
+
+                                    KeyboardRow row1 = new KeyboardRow();
+                                    row1.add(new KeyboardButton(Button.WEEKLY_TARGET));
+                                    row1.add(new KeyboardButton(Button.PROFILE));
+                                    rowList.add(row1);
+
+                                    KeyboardRow row3 = new KeyboardRow();
+                                    row3.add(new KeyboardButton(Button.SHOW_ALL_TARGET_HISTORY));
+                                    rowList.add(row3);
+
+
+                                    replyKeyboardMarkup.setKeyboard(rowList);
+                                    sendMessage.setReplyMarkup(replyKeyboardMarkup);
+
+
+
                                 break;
                             case Button.REJECT:
 

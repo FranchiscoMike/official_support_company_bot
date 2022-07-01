@@ -43,6 +43,5 @@ public class BotUser {
 
     private boolean isTargetEdited = false;
 
-    private String resultsOfTarget ;
 
 }

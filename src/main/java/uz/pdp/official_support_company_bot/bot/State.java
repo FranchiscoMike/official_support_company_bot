@@ -16,6 +16,7 @@ public interface State {
 
     String MENU = "Showing menu";
     String SETTING_WEEKLY_TARGET = "Setting his or her weekly target";
+    String CHECKING_TARGET = "Checking target!";
     String SENDING_NEWS = "Sending news to all users of bot!";
 
     String SEND_TO_ALL = "Sending to all users";

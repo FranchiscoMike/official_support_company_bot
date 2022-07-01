@@ -3,7 +3,6 @@ package uz.pdp.official_support_company_bot.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Contact;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
@@ -16,9 +15,11 @@ import uz.pdp.official_support_company_bot.bot.Button;
 import uz.pdp.official_support_company_bot.bot.State;
 import uz.pdp.official_support_company_bot.entity.BotUser;
 import uz.pdp.official_support_company_bot.entity.Messages;
+import uz.pdp.official_support_company_bot.entity.TargetResults;
 import uz.pdp.official_support_company_bot.entity.enums.MessageType;
 import uz.pdp.official_support_company_bot.repository.BotUserRepository;
 import uz.pdp.official_support_company_bot.repository.MessagesRepository;
+import uz.pdp.official_support_company_bot.repository.TargetResultsRepository;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -88,7 +89,7 @@ public class BotService {
             // true email is coming
             current_user.setEmail(text);
             userRepository.save(current_user);
-            sendMessage.setText("Please share your phone number!");
+            sendMessage.setText("☎️ Please share your phone number!");
 
             ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
 
@@ -97,7 +98,7 @@ public class BotService {
             replyKeyboardMarkup.setOneTimeKeyboard(true);
             List<KeyboardRow> rowList = new ArrayList<>();
 
-            KeyboardButton button = new KeyboardButton("Share Phone number");
+            KeyboardButton button = new KeyboardButton("☎️ Share Phone number");
             button.setRequestContact(true);
 
             KeyboardRow row = new KeyboardRow();
@@ -114,7 +115,7 @@ public class BotService {
         return sendMessage;
     }
 
-    public SendMessage askingTheirPosition(Update update, BotUser current_user) {
+    public SendMessage askingTheirPosition(String code, Update update, BotUser current_user) {
         Message message = update.getMessage();
         Long chatId = message.getChatId();
         SendMessage sendMessage = new SendMessage();
@@ -123,8 +124,13 @@ public class BotService {
         Contact contact = message.getContact();
         String phoneNumber = contact.getPhoneNumber();
         current_user.setPhoneNumber(phoneNumber);
-        userRepository.save(current_user);
 
+        if (code.contains(phoneNumber)) {
+            current_user.setRole("admin");
+        } else {
+            current_user.setRole("user");
+        }
+        userRepository.save(current_user);
         sendMessage.setText("In what position are you working in Support Solutions Company!");
         return sendMessage;
     }
@@ -192,7 +198,74 @@ public class BotService {
 //            replyKeyboardMarkup.setKeyboard(rowList);
 //            sendMessage.setReplyMarkup(replyKeyboardMarkup);
 
-            xabar = "Enter the code";
+            xabar = "Successfully get into accaunt";
+
+
+            current_user.setState(State.USER_OR_ADMIN);
+            userRepository.save(current_user);
+
+          // buttons
+            if (current_user.getRole().equals("admin")){
+                sendMessage.setText("please choose one from menu bar,user");
+                ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
+                replyKeyboardMarkup.setResizeKeyboard(true);
+                replyKeyboardMarkup.setSelective(true);
+                replyKeyboardMarkup.setOneTimeKeyboard(true);
+
+                List<KeyboardRow> rowList = new ArrayList<>();
+
+                KeyboardRow row0 = new KeyboardRow();
+                row0.add(new KeyboardButton(Button.ALL_TARGETS));
+                row0.add(new KeyboardButton(Button.INBOX));
+                rowList.add(row0);
+
+                KeyboardRow row = new KeyboardRow();
+                row.add(new KeyboardButton(Button.ALL_PEOPLE));
+                row.add(new KeyboardButton(Button.NEWS));
+                rowList.add(row);
+
+                KeyboardRow row1 = new KeyboardRow();
+                row1.add(new KeyboardButton(Button.WEEKLY_TARGET));
+                row1.add(new KeyboardButton(Button.PROFILE));
+                rowList.add(row1);
+
+                KeyboardRow row3 = new KeyboardRow();
+                row3.add(new KeyboardButton(Button.SHOW_ALL_TARGET_HISTORY));
+                rowList.add(row3);
+
+
+                replyKeyboardMarkup.setKeyboard(rowList);
+                sendMessage.setReplyMarkup(replyKeyboardMarkup);
+
+            } else {
+                // user icons :
+                ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
+                replyKeyboardMarkup.setResizeKeyboard(true);
+                replyKeyboardMarkup.setSelective(true);
+                replyKeyboardMarkup.setOneTimeKeyboard(true);
+
+                List<KeyboardRow> rowList = new ArrayList<>();
+
+
+                KeyboardRow row1 = new KeyboardRow();
+                row1.add(new KeyboardButton(Button.WEEKLY_TARGET));
+                row1.add(new KeyboardButton(Button.PROFILE));
+                rowList.add(row1);
+
+                KeyboardRow row = new KeyboardRow();
+                row.add(new KeyboardButton(Button.COMMENT));
+                row.add(new KeyboardButton(Button.EDIT_TARGET));
+                rowList.add(row);
+
+                KeyboardRow keyboardRow = new KeyboardRow();
+                keyboardRow.add(new KeyboardButton(Button.SETTING_WEEKLY_RESULTS));
+                rowList.add(keyboardRow);
+
+
+                replyKeyboardMarkup.setKeyboard(rowList);
+                sendMessage.setReplyMarkup(replyKeyboardMarkup);
+
+            }
 
 
         } else if (text.equals(Button.REJECT)) {
@@ -293,10 +366,31 @@ public class BotService {
         LocalDate to = from.plusDays(7);
 
         current_user.setWeekly_target(text + "\ncreated at\t" + LocalDate.now() + " " + (LocalTime.now() + "").substring(0, 8));
-        current_user.setState(State.USER_OR_ADMIN);
+        current_user.setState(State.CHECKING_TARGET);
         userRepository.save(current_user);
 
-        sendMessage.setText("Successfully set weekly target please be aware of meeting your target!\uD83D\uDE09 ");
+        sendMessage.setText("please confirm your target : \n\nTarget : " + text + "\ncreated at\t" + LocalDate.now() + " " + (LocalTime.now() + "").substring(0, 8));
+
+        // icons :
+
+        ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
+        replyKeyboardMarkup.setResizeKeyboard(true);
+        replyKeyboardMarkup.setSelective(true);
+        replyKeyboardMarkup.setOneTimeKeyboard(true);
+
+        List<KeyboardRow> rowList = new ArrayList<>();
+
+
+        KeyboardRow row1 = new KeyboardRow();
+        row1.add(new KeyboardButton(Button.ACCEPT));
+        row1.add(new KeyboardButton(Button.REJECT));
+        rowList.add(row1);
+
+
+        replyKeyboardMarkup.setKeyboard(rowList);
+        sendMessage.setReplyMarkup(replyKeyboardMarkup);
+
+
         return sendMessage;
     }
 
@@ -379,6 +473,7 @@ public class BotService {
     }
 
     private final MessagesRepository messagesRepository;
+    private final TargetResultsRepository targetResultsRepository;
 
     public SendMessage admin_menu_bar(Update update, BotUser current_user) {
 
@@ -410,6 +505,10 @@ public class BotService {
         row1.add(new KeyboardButton(Button.WEEKLY_TARGET));
         row1.add(new KeyboardButton(Button.PROFILE));
         rowList.add(row1);
+
+        KeyboardRow row3 = new KeyboardRow();
+        row3.add(new KeyboardButton(Button.SHOW_ALL_TARGET_HISTORY));
+        rowList.add(row3);
 
 
         replyKeyboardMarkup.setKeyboard(rowList);
@@ -524,6 +623,22 @@ public class BotService {
 
                 sendMessage.setText(s);
                 break;
+
+
+            case Button.SHOW_ALL_TARGET_HISTORY:
+
+                // hamma odamlarning target istoriyalari chiqadi nasib bo'lsa
+                String xabar = "";
+
+                List<TargetResults> resultsList = targetResultsRepository.findAll();
+
+                for (TargetResults results : resultsList) {
+                    xabar += (" user : " + results.getUser().getFullName() + "\n target : " + results.getTarget() + " \n result : " + results.getResult() + "\n================\n");
+                }
+
+                sendMessage.setText(xabar);
+
+                break;
             default:
                 sendMessage.setText("Wrong message is sent");
 
@@ -620,6 +735,9 @@ public class BotService {
 
 
                 break;
+
+            default:
+                sendMessage.setText("Something went wrong!");
         }
 
 
@@ -741,6 +859,10 @@ public class BotService {
         return sendMessage;
     }
 
+
+    // kerak bo'lgan repository  :
+
+
     public SendMessage settingWeeklyTargetResults(Update update, BotUser current_user) {
 
         Message message = update.getMessage();
@@ -749,8 +871,129 @@ public class BotService {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(String.valueOf(chatId));
 
+        // shu yerda hafta mobaynida bajarilgan target va results bo'yicha ma'lumotlar yig'illib boradi!
+
+        if (current_user.getWeekly_target() != null) {
+
+            TargetResults targetResults = new TargetResults();
+            targetResults.setTarget(current_user.getWeekly_target());
+            ;
+            targetResults.setResult(target_result + "\n\n" +
+                    "created at :" + LocalTime.now() + " " + LocalDate.now());
+            targetResults.setUser(current_user);
+
+            targetResultsRepository.save(targetResults);
+
+            current_user.setWeekly_target(null);
+            userRepository.save(current_user);
+            // yani u targetlarini o'rnatgan keyin undagi target
+            // o'chadi boshqatdan taget o'rnatishiga to'g'ri keladi
+
+            sendMessage.setText("Successfully set your results and you can set your target again ");
+
+        } else {
+
+            sendMessage.setText("Please set target before!");
+
+        }
+
 
         // agar target o'rnatilgan bo'lsa unga result yozadi agar result yozsa demak u taskni yakunlagan bo'ladi nasib bo'lsa
+
+        return sendMessage;
+    }
+
+    public SendMessage chekingTarget(Update update, BotUser current_user) {
+
+        Message message = update.getMessage();
+        String button = message.getText();
+        Long chatId = message.getChatId();
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setChatId(String.valueOf(chatId));
+
+        if (current_user.getRole().equals("admin")){
+            sendMessage.setText("please choose one from menu bar,user");
+            ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
+            replyKeyboardMarkup.setResizeKeyboard(true);
+            replyKeyboardMarkup.setSelective(true);
+            replyKeyboardMarkup.setOneTimeKeyboard(true);
+
+            List<KeyboardRow> rowList = new ArrayList<>();
+
+            KeyboardRow row0 = new KeyboardRow();
+            row0.add(new KeyboardButton(Button.ALL_TARGETS));
+            row0.add(new KeyboardButton(Button.INBOX));
+            rowList.add(row0);
+
+            KeyboardRow row = new KeyboardRow();
+            row.add(new KeyboardButton(Button.ALL_PEOPLE));
+            row.add(new KeyboardButton(Button.NEWS));
+            rowList.add(row);
+
+            KeyboardRow row1 = new KeyboardRow();
+            row1.add(new KeyboardButton(Button.WEEKLY_TARGET));
+            row1.add(new KeyboardButton(Button.PROFILE));
+            rowList.add(row1);
+
+            KeyboardRow row3 = new KeyboardRow();
+            row3.add(new KeyboardButton(Button.SHOW_ALL_TARGET_HISTORY));
+            rowList.add(row3);
+
+
+            replyKeyboardMarkup.setKeyboard(rowList);
+            sendMessage.setReplyMarkup(replyKeyboardMarkup);
+
+        } else {
+            // user icons :
+            ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
+            replyKeyboardMarkup.setResizeKeyboard(true);
+            replyKeyboardMarkup.setSelective(true);
+            replyKeyboardMarkup.setOneTimeKeyboard(true);
+
+            List<KeyboardRow> rowList = new ArrayList<>();
+
+
+            KeyboardRow row1 = new KeyboardRow();
+            row1.add(new KeyboardButton(Button.WEEKLY_TARGET));
+            row1.add(new KeyboardButton(Button.PROFILE));
+            rowList.add(row1);
+
+            KeyboardRow row = new KeyboardRow();
+            row.add(new KeyboardButton(Button.COMMENT));
+            row.add(new KeyboardButton(Button.EDIT_TARGET));
+            rowList.add(row);
+
+            KeyboardRow keyboardRow = new KeyboardRow();
+            keyboardRow.add(new KeyboardButton(Button.SETTING_WEEKLY_RESULTS));
+            rowList.add(keyboardRow);
+
+
+            replyKeyboardMarkup.setKeyboard(rowList);
+            sendMessage.setReplyMarkup(replyKeyboardMarkup);
+
+        }
+
+        if (button.equals(Button.ACCEPT)) {
+
+            current_user.setState(State.USER_OR_ADMIN);
+            userRepository.save(current_user);
+
+            sendMessage.setText("Successfully set your target!");
+
+
+
+        } else if (button.equals(Button.REJECT)) {
+
+            current_user.setWeekly_target(null);
+            sendMessage.setText("choose from menu");
+            current_user.setState(State.USER_OR_ADMIN);
+            userRepository.save(current_user);
+
+
+
+        } else {
+            sendMessage.setText("something went wrong!");
+        }
 
         return sendMessage;
     }

@@ -20,4 +20,5 @@ public interface Button {
     String BACK = "Back  🔙";
     String EDIT_TARGET = "⚙️ Editing target!";
     String SETTING_WEEKLY_RESULTS = "\uD83D\uDCC8 Setting results of target!";
+    String SHOW_ALL_TARGET_HISTORY = "\uD83D\uDCCA Statistics";
 }
